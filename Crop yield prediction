@@ -1,0 +1,92 @@
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+warnings.simplefilter(action='ignore', category=UserWarning)
+import seaborn as sns
+import matplotlib.pyplot as plt
+%matplotlib inline
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
+df=pd.read_csv('/content/Crop_recommendation.csv')
+df.head()
+
+df.describe()
+
+plt.figure(figsize=(12,5))
+plt.subplot(1, 2, 1)
+sns.distplot(df['temperature'],color="purple",bins=15,hist_kws={'alpha':0.2})
+plt.subplot(1, 2, 2)
+sns.distplot(df['ph'],color="green",bins=15,hist_kws={'alpha':0.2})
+
+sns.pairplot(df, hue= 'label')
+
+sns.jointplot(x="rainfall",y="humidity",data=df[(df['temperature']<30) & (df['rainfall']>120)],hue="label")
+
+sns.boxplot(y='label',x='ph',data=df)
+
+sns.boxplot(y='label',x='P',data=df[df['rainfall']>150])
+
+sns.heatmap(X.corr())
+
+#KNN classification
+c=df.label.astype('category')
+targets = dict(enumerate(c.cat.categories))
+df['target']=c.cat.codes
+
+y=df.target
+X=df[['N','P','K','temperature','humidity','ph','rainfall']]
+print(targets)
+
+#splitting test and train data
+X_train, X_test, y_train, y_test = train_test_split(X, y,random_state=1, shuffle=True)
+
+scaler = MinMaxScaler()
+X_train_scaled = scaler.fit_transform(X_train)
+
+# we must apply the scaling to the test set as well that we are computing for the training set
+X_test_scaled = scaler.transform(X_test)
+
+#knn model creation
+from sklearn.neighbors import KNeighborsClassifier
+knn = KNeighborsClassifier()
+knn.fit(X_train_scaled, y_train)
+knn.score(X_test_scaled, y_test)
+
+mat=confusion_matrix(y_test,knn.predict(X_test_scaled))
+df_cm = pd.DataFrame(mat, list(targets.values()), list(targets.values()))
+sns.set(font_scale=1.0) # for label size
+plt.figure(figsize = (12,8))
+sns.heatmap(df_cm, annot=True, annot_kws={"size": 12},cmap="terrain")
+
+k_range = range(1,11)
+scores = []
+
+for k in k_range:
+    knn = KNeighborsClassifier(n_neighbors = k)
+    knn.fit(X_train_scaled, y_train)
+    scores.append(knn.score(X_test_scaled, y_test))
+    
+plt.xlabel('k')
+plt.ylabel('accuracy')
+plt.scatter(k_range, scores)
+plt.vlines(k_range,0, scores, linestyle="dashed")
+plt.ylim(0.96,0.99)
+plt.xticks([i for i in range(1,11)]);
+
+x=scaler.fit_transform(X)
+knn = KNeighborsClassifier(n_neighbors = 4)
+knn.fit(X_train_scaled, y_train)
+r=[[90,58,43,21.77046169,80.31964488,7.00,226]]
+maize=[[73,45,21,24.60532218,73.58868502,6.636803222999999,96.59195302]]
+kidneybeans=[[6,77,25,20.61162284,24.36314135,5.792744849,69.63833855]]
+banana=[[100,76,45,27.66752761,79.68542782,6.490074429,108.66464]]
+grapes=[[5,126,197,12.80000387,81.20876367,6.417500829,67.10439401]]
+input=scaler.transform(r)
+#print(knn.predict(input))
+r=knn.predict(input)
+for i in r:
+  output=targets[i]
+  print(output)
